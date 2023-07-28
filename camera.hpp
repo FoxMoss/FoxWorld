@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include "raymath.h"
+#include <thread>
 
 #define EP 1
 #define MAX 100
@@ -52,7 +53,7 @@ class FoxTri {
 public:
   FoxTri(Vector3 A, Vector3 B, Vector3 C);
   ~FoxTri();
-  float IntersectsRay(RaycastRay ray);
+  float IntersectsRay(RaycastRay ray, float maxDist);
   Vector3 normal;
 
   Vector3 A;
@@ -61,6 +62,10 @@ public:
 
 private:
   FoxPlane *raycastPlane;
+  // Pre-Calc
+  Vector3 BASub;
+  Vector3 CBSub;
+  Vector3 ACSub;
 };
 
 struct FoxModel {
@@ -71,4 +76,5 @@ struct FoxModel {
 FoxModel makeCube();
 FoxTri **vertToTri(float *vert, int size);
 
+void proccessPixel(Image *image, int x, int y, RaycastRay *ray);
 #endif

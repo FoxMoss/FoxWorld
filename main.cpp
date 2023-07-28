@@ -50,6 +50,13 @@ static void UpdateDrawFrame(void) {
   if (IsKeyDown(KEY_S)) {
     camera->position.z -= STEP;
   }
+  if (IsKeyDown(KEY_D)) {
+    camera->position.x += STEP;
+  }
+
+  if (IsKeyDown(KEY_A)) {
+    camera->position.x -= STEP;
+  }
 
   if (IsKeyDown(KEY_E)) {
     camera->position.y += STEP;
