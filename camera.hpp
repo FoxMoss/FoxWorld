@@ -7,6 +7,7 @@
 
 #define EP 1
 #define MAX 100
+#define MAX_THREADS 10
 
 class RaycastRay {
 private:
@@ -25,7 +26,9 @@ class FoxCamera {
 private:
   int width;
   int height;
+  int vmax;
   int aspectRatio;
+  pthread_t threads[MAX_THREADS];
 
   RaycastRay **rays;
 
@@ -33,6 +36,8 @@ public:
   FoxCamera(int cWidth, int cHeight);
   ~FoxCamera();
   void Render(Image *image);
+  void RenderChunk(Image *image, int chunk);
+  static void *ThreadHelper(void *context);
   Vector3 position;
   Vector3 rotation;
 };
@@ -77,4 +82,10 @@ FoxModel makeCube();
 FoxTri **vertToTri(float *vert, int size);
 
 void proccessPixel(Image *image, int x, int y, RaycastRay *ray);
+
+typedef struct ChunkInfo {
+  FoxCamera *camera;
+  Image *image;
+  int chunk;
+} ChunkInfo;
 #endif

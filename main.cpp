@@ -29,8 +29,9 @@ int main() {
   emscripten_set_main_loop(UpdateDrawFrame, 60, 1);
 #else
 
-  SetTargetFPS(60);
+  SetTargetFPS(30);
 
+  camera->Render(&imageBuffer);
   while (!WindowShouldClose()) {
     UpdateDrawFrame();
   }
@@ -72,8 +73,6 @@ static void UpdateDrawFrame(void) {
   if (IsKeyDown(KEY_LEFT)) {
     camera->rotation.y -= STEP;
   }
-
-  camera->Render(&imageBuffer);
 
   UpdateTexture(textureBuffer, imageBuffer.data);
 

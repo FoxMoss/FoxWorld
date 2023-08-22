@@ -1,6 +1,7 @@
 #include "camera.hpp"
 #include "raylib.h"
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <raymath.h>
@@ -17,6 +18,7 @@ FoxModel model;
 FoxCamera::FoxCamera(int cWidth, int cHeight) {
   width = cWidth;
   height = cHeight;
+  vmax = MAX_THREADS;
   aspectRatio = cWidth / cHeight;
 
   rays = (RaycastRay **)malloc(sizeof(RaycastRay *) * width * height);
@@ -47,24 +49,36 @@ FoxCamera::~FoxCamera() {
   free(rays);
 }
 bool offset;
-void FoxCamera::Render(Image *image) {
-  for (int y = 0; y < width; y++) {
-    for (int x = 0; x < height; x++) {
+void FoxCamera::RenderChunk(Image *image, int chunk) {
+  for (int y = 0; y < height; y += vmax) {
+    for (int x = 0; x < width; x++) {
 
-      if ((y + offset) % 2 == 0)
-        continue;
-
-      RaycastRay *ray = rays[x + y * width];
+      RaycastRay *ray = rays[(x) + ((y + chunk) * width)];
       ray->origin = position;
       ray->rotation = rotation;
       ray->directionComputed =
           Vector3RotateByAxisAngle(ray->direction, {0, 1, 0}, ray->rotation.y);
 
-      proccessPixel(image, x, y, ray);
+      proccessPixel(image, x, y + chunk, ray);
     }
   }
 
   offset = !offset;
+
+  this->RenderChunk(image, chunk);
+}
+void *FoxCamera::ThreadHelper(void *context) {
+  pthread_detach(pthread_self());
+  ChunkInfo *chunk = static_cast<ChunkInfo *>(context);
+  chunk->camera->RenderChunk(chunk->image, chunk->chunk);
+  return NULL;
+}
+void FoxCamera::Render(Image *image) {
+  for (int threadId = 0; threadId < MAX_THREADS; threadId++) {
+    ChunkInfo *chunk = new ChunkInfo{this, image, threadId};
+    pthread_create(&threads[threadId], NULL, &FoxCamera::ThreadHelper,
+                   (void *)chunk);
+  }
 }
 
 void proccessPixel(Image *image, int x, int y, RaycastRay *ray) {
