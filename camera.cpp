@@ -15,7 +15,10 @@ Vector3 B = {-1, -1, 1};
 Vector3 C = {0, 1, 1};
 FoxTri *tri = new FoxTri(A, B, C);
 
-void setupModels() { models.push_back(makeTorus({0, -3, 0}, {1, 1, 1})); }
+void setupModels() {
+  models.push_back(readTris());
+  //  models.push_back(makeTorus({0, -3, 0}, {1, 1, 1}));
+}
 
 FoxCamera::FoxCamera(int cWidth, int cHeight) {
   width = cWidth;
@@ -27,8 +30,8 @@ FoxCamera::FoxCamera(int cWidth, int cHeight) {
 
   for (int y = 0; y < width; y++) {
     for (int x = 0; x < height; x++) {
-      float xx = (2 * ((x + 0.5) * 1 / width) - 1) * aspectRatio;
-      float yy = (1 - 2 * ((y + 0.5) * 1 / height));
+      float xx = (1.3 * ((x + 0.5) * 1 / width) - 1) * aspectRatio;
+      float yy = (1 - 1.3 * ((y + 0.5) * 1 / height));
       Vector3 rayDirection = {xx, yy, 1};
       rayDirection = Vector3Normalize(rayDirection);
 
@@ -121,10 +124,12 @@ Color RaycastRay::GetColor() {
 
   if (topScale != INFINITY) {
 
-    topColor = ColorFromHSV(
-        Vector3Scale(directionComputed, topScale).z / 4000, 40,
-        (255 -
-         Vector3DotProduct(Vector3Normalize(topNormal), {-0.2, -1, 0}) * 10));
+    topColor =
+        ColorFromHSV(0, 90,
+                     Clamp(255 - Vector3DotProduct(Vector3Normalize(topNormal),
+                                                   directionComputed) /
+                                     300,
+                           0, 255));
     // topColor = RED;
   }
   return topColor;

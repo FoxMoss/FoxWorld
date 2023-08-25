@@ -356,7 +356,8 @@ SRC = $(call rwildcard, *.c, *.h)
 #OBJS = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 OBJS ?= main.cpp \
 				camera.cpp \
-			models.cpp 
+			models.cpp \
+			customModels.cpp
 #  utahTeapot.cpp
 
 # For Android platform we call a custom Makefile.Android
