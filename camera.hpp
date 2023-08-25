@@ -4,10 +4,12 @@
 #include "raylib.h"
 #include "raymath.h"
 #include <thread>
+#include <vector>
 
 #define EP 1
 #define MAX 100
-#define MAX_THREADS 10
+#define SCALE 5
+#define MAX_THREADS 5
 
 class RaycastRay {
 private:
@@ -21,27 +23,6 @@ public:
   ~RaycastRay();
   Color GetColor();
 };
-
-class FoxCamera {
-private:
-  int width;
-  int height;
-  int vmax;
-  int aspectRatio;
-  pthread_t threads[MAX_THREADS];
-
-  RaycastRay **rays;
-
-public:
-  FoxCamera(int cWidth, int cHeight);
-  ~FoxCamera();
-  void Render(Image *image);
-  void RenderChunk(Image *image, int chunk);
-  static void *ThreadHelper(void *context);
-  Vector3 position;
-  Vector3 rotation;
-};
-
 class FoxPlane {
 public:
   FoxPlane(Vector3 normal, Vector3 origin);
@@ -53,7 +34,6 @@ public:
 
 private:
 };
-
 class FoxTri {
 public:
   FoxTri(Vector3 A, Vector3 B, Vector3 C);
@@ -77,10 +57,34 @@ struct FoxModel {
   FoxTri **tris;
   int size;
 };
+class FoxCamera {
+private:
+  int width;
+  int height;
+  int vmax;
+  int aspectRatio;
+  pthread_t threads[MAX_THREADS];
+  // std::vector<FoxModel> models;
 
-FoxModel makeCube();
-FoxTri **vertToTri(float *vert, int size);
+  RaycastRay **rays;
 
+public:
+  FoxCamera(int cWidth, int cHeight);
+  ~FoxCamera();
+  void Render(Image *image);
+  void RenderChunk(Image *image, int chunk);
+  static void *ThreadHelper(void *context);
+  Vector3 position;
+  Vector3 rotation;
+};
+
+FoxModel makeCube(Vector3 position, Vector3 scale);
+FoxModel makeTorus(Vector3 position, Vector3 scale);
+void setupModels();
+FoxModel readTris();
+FoxTri **vertToTri(float *vert, int size, Vector3 position, Vector3 scale);
+
+inline std::vector<FoxModel> models;
 void proccessPixel(Image *image, int x, int y, RaycastRay *ray);
 
 typedef struct ChunkInfo {

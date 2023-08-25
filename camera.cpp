@@ -4,16 +4,18 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <pthread.h>
 #include <raymath.h>
 #include <string>
 #include <thread>
+#include <vector>
 
 Vector3 A = {1, -1, 1};
 Vector3 B = {-1, -1, 1};
 Vector3 C = {0, 1, 1};
 FoxTri *tri = new FoxTri(A, B, C);
 
-FoxModel model;
+void setupModels() { models.push_back(makeTorus({0, -3, 0}, {1, 1, 1})); }
 
 FoxCamera::FoxCamera(int cWidth, int cHeight) {
   width = cWidth;
@@ -35,17 +37,17 @@ FoxCamera::FoxCamera(int cWidth, int cHeight) {
       rays[x + y * width] = ray;
     }
   }
-
-  model = makeCube();
 }
 
 FoxCamera::~FoxCamera() {
+
   delete tri;
   for (int y = 0; y < width; y++) {
     for (int x = 0; x < height; x++) {
       delete rays[x + y * width];
     }
   }
+
   free(rays);
 }
 bool offset;
@@ -64,11 +66,8 @@ void FoxCamera::RenderChunk(Image *image, int chunk) {
   }
 
   offset = !offset;
-
-  this->RenderChunk(image, chunk);
 }
 void *FoxCamera::ThreadHelper(void *context) {
-  pthread_detach(pthread_self());
   ChunkInfo *chunk = static_cast<ChunkInfo *>(context);
   chunk->camera->RenderChunk(chunk->image, chunk->chunk);
   return NULL;
@@ -79,10 +78,15 @@ void FoxCamera::Render(Image *image) {
     pthread_create(&threads[threadId], NULL, &FoxCamera::ThreadHelper,
                    (void *)chunk);
   }
+  for (int threadId = 0; threadId < MAX_THREADS; threadId++) {
+    pthread_join(threads[threadId], NULL);
+  }
 }
 
 void proccessPixel(Image *image, int x, int y, RaycastRay *ray) {
-  ImageDrawPixel(image, x, y, ray->GetColor());
+  ImageDrawRectangleRec(image,
+                        {(float)x * SCALE, (float)y * SCALE, SCALE, SCALE},
+                        ray->GetColor());
 }
 
 RaycastRay::RaycastRay(Vector3 cDirection, Vector3 cOrigin) {
@@ -94,19 +98,35 @@ RaycastRay::~RaycastRay() {}
 
 Color RaycastRay::GetColor() {
 
-  Color topColor = BLUE;
+  Color topColor = GRAY;
   float topScale = INFINITY;
-  for (int i = 0; i < model.size; i++) {
-    float scalar = model.tris[i]->IntersectsRay(*this, topScale);
+  Vector3 topNormal;
 
-    if (scalar == -1)
-      continue;
+  for (std::vector<FoxModel>::iterator model = models.begin();
+       model != models.end(); model++) {
+    for (int i = 0; i < model->size; i++) {
+      float scalar = model->tris[i]->IntersectsRay(*this, topScale);
 
-    topScale = scalar;
-    topColor = ColorFromHSV(
-        0, 0, 255 - Vector3DotProduct(model.tris[i]->normal, {1, -1, 0}) * 10);
+      if (scalar == -1 || scalar >= topScale)
+        continue;
+
+      topScale = scalar;
+      topNormal = model->tris[i]->normal;
+      // topColor = RED;
+      // topColor = ColorFromHSV(
+      //  0, 0, 255 - Vector3DotProduct(model.tris[i]->normal, {1, -1, 0}) *
+      //  10);
+    }
   }
 
+  if (topScale != INFINITY) {
+
+    topColor = ColorFromHSV(
+        Vector3Scale(directionComputed, topScale).z / 4000, 40,
+        (255 -
+         Vector3DotProduct(Vector3Normalize(topNormal), {-0.2, -1, 0}) * 10));
+    // topColor = RED;
+  }
   return topColor;
 }
 

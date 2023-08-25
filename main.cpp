@@ -1,8 +1,8 @@
 #include "camera.hpp"
 #include "raylib.h"
 
-#define WIDTH 450
-#define HEIGHT 450
+#define WIDTH 100
+#define HEIGHT 100
 #define STEP 0.1
 
 #if defined(PLATFORM_WEB)
@@ -17,28 +17,28 @@ Image imageBuffer;
 Texture textureBuffer;
 
 int main() {
+
   const int screenWidth = WIDTH;
   const int screenHeight = HEIGHT;
 
   SetTraceLogLevel(LOG_WARNING);
-  InitWindow(screenWidth, screenHeight, "[FoxEngine]");
+  InitWindow(screenWidth * SCALE, screenHeight * SCALE, "[FoxEngine]");
 
-  imageBuffer = GenImageColor(WIDTH, HEIGHT, WHITE);
+  imageBuffer = GenImageColor(screenWidth * SCALE, screenHeight * SCALE, WHITE);
   textureBuffer = LoadTextureFromImage(imageBuffer);
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(UpdateDrawFrame, 60, 1);
 #else
 
-  SetTargetFPS(30);
+  SetTargetFPS(60);
+  setupModels();
 
-  camera->Render(&imageBuffer);
   while (!WindowShouldClose()) {
     UpdateDrawFrame();
   }
 #endif
 
   CloseWindow();
-
   return 0;
 }
 
@@ -78,7 +78,9 @@ static void UpdateDrawFrame(void) {
 
   BeginDrawing();
 
-  ClearBackground(BLUE);
+  ClearBackground(RED);
+
+  camera->Render(&imageBuffer);
 
   DrawTexture(textureBuffer, 0, 0, WHITE);
 
