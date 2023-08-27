@@ -3,9 +3,12 @@
 #include <raylib.h>
 
 #define SPEED 2
-#define STEP 0.7
-#define FRICTION 0.4
+#define STEP 0.1
 
+#define FRICTION 0.7
+#define DRAG 0.8
+
+#define COLLISION_DEPTH 5
 class Player : FoxCamera {
 private:
   Image image;
@@ -17,6 +20,7 @@ private:
   Vector3 collisionPosition;
   Vector3 nextPos;
   float playerHeight;
+  bool grounded;
   std::vector<FoxModel> models;
 
   int width;

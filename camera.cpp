@@ -20,6 +20,7 @@ FoxCamera::FoxCamera(int cWidth, int cHeight) {
   height = cHeight;
   vmax = MAX_THREADS;
   aspectRatio = cWidth / cHeight;
+  rotation = Vector3Zero();
 
   rays = (RaycastRay **)malloc(sizeof(RaycastRay *) * width * height);
 
