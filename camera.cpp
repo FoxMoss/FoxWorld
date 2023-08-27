@@ -15,11 +15,6 @@ Vector3 B = {-1, -1, 1};
 Vector3 C = {0, 1, 1};
 FoxTri *tri = new FoxTri(A, B, C);
 
-void setupModels() {
-  models.push_back(readTris());
-  //  models.push_back(makeTorus({0, -3, 0}, {1, 1, 1}));
-}
-
 FoxCamera::FoxCamera(int cWidth, int cHeight) {
   width = cWidth;
   height = cHeight;
@@ -30,8 +25,8 @@ FoxCamera::FoxCamera(int cWidth, int cHeight) {
 
   for (int y = 0; y < width; y++) {
     for (int x = 0; x < height; x++) {
-      float xx = (1.3 * ((x + 0.5) * 1 / width) - 1) * aspectRatio;
-      float yy = (1 - 1.3 * ((y + 0.5) * 1 / height));
+      float xx = (FOV * ((x + 0.5) * 1 / width) - 1) * aspectRatio;
+      float yy = (1 - FOV * ((y + 0.5) * 1 / height));
       Vector3 rayDirection = {xx, yy, 1};
       rayDirection = Vector3Normalize(rayDirection);
 
@@ -54,7 +49,8 @@ FoxCamera::~FoxCamera() {
   free(rays);
 }
 bool offset;
-void FoxCamera::RenderChunk(Image *image, int chunk) {
+void FoxCamera::RenderChunk(Image *image, int chunk,
+                            std::vector<FoxModel> *models) {
   for (int y = 0; y < height; y += vmax) {
     for (int x = 0; x < width; x++) {
 
@@ -62,9 +58,11 @@ void FoxCamera::RenderChunk(Image *image, int chunk) {
       ray->origin = position;
       ray->rotation = rotation;
       ray->directionComputed =
-          Vector3RotateByAxisAngle(ray->direction, {0, 1, 0}, ray->rotation.y);
+          Vector3RotateByAxisAngle(ray->direction, {1, 0, 0}, ray->rotation.x);
+      ray->directionComputed = Vector3RotateByAxisAngle(
+          ray->directionComputed, {0, -1, 0}, ray->rotation.y);
 
-      proccessPixel(image, x, y + chunk, ray);
+      proccessPixel(image, x, y + chunk, ray, models);
     }
   }
 
@@ -72,12 +70,12 @@ void FoxCamera::RenderChunk(Image *image, int chunk) {
 }
 void *FoxCamera::ThreadHelper(void *context) {
   ChunkInfo *chunk = static_cast<ChunkInfo *>(context);
-  chunk->camera->RenderChunk(chunk->image, chunk->chunk);
+  chunk->camera->RenderChunk(chunk->image, chunk->chunk, chunk->models);
   return NULL;
 }
-void FoxCamera::Render(Image *image) {
+void FoxCamera::Render(Image *image, std::vector<FoxModel> *models) {
   for (int threadId = 0; threadId < MAX_THREADS; threadId++) {
-    ChunkInfo *chunk = new ChunkInfo{this, image, threadId};
+    ChunkInfo *chunk = new ChunkInfo{this, image, threadId, models};
     pthread_create(&threads[threadId], NULL, &FoxCamera::ThreadHelper,
                    (void *)chunk);
   }
@@ -86,10 +84,11 @@ void FoxCamera::Render(Image *image) {
   }
 }
 
-void proccessPixel(Image *image, int x, int y, RaycastRay *ray) {
+void proccessPixel(Image *image, int x, int y, RaycastRay *ray,
+                   std::vector<FoxModel> *models) {
   ImageDrawRectangleRec(image,
                         {(float)x * SCALE, (float)y * SCALE, SCALE, SCALE},
-                        ray->GetColor());
+                        ray->GetColor(models));
 }
 
 RaycastRay::RaycastRay(Vector3 cDirection, Vector3 cOrigin) {
@@ -99,14 +98,15 @@ RaycastRay::RaycastRay(Vector3 cDirection, Vector3 cOrigin) {
 
 RaycastRay::~RaycastRay() {}
 
-Color RaycastRay::GetColor() {
+Color RaycastRay::GetColor(std::vector<FoxModel> *models) {
 
-  Color topColor = GRAY;
+  Color color = GRAY;
   float topScale = INFINITY;
+  int topHue = 0;
   Vector3 topNormal;
 
-  for (std::vector<FoxModel>::iterator model = models.begin();
-       model != models.end(); model++) {
+  for (std::vector<FoxModel>::iterator model = models->begin();
+       model != models->end(); model++) {
     for (int i = 0; i < model->size; i++) {
       float scalar = model->tris[i]->IntersectsRay(*this, topScale);
 
@@ -115,24 +115,20 @@ Color RaycastRay::GetColor() {
 
       topScale = scalar;
       topNormal = model->tris[i]->normal;
-      // topColor = RED;
-      // topColor = ColorFromHSV(
-      //  0, 0, 255 - Vector3DotProduct(model.tris[i]->normal, {1, -1, 0}) *
-      //  10);
+      topHue = model->hue;
     }
   }
 
   if (topScale != INFINITY) {
 
-    topColor =
-        ColorFromHSV(0, 90,
-                     Clamp(255 - Vector3DotProduct(Vector3Normalize(topNormal),
-                                                   directionComputed) /
-                                     300,
-                           0, 255));
-    // topColor = RED;
+    color = ColorFromHSV(
+        topHue, 100,
+        Clamp(255 - std::fabs(Vector3DotProduct(Vector3Normalize(topNormal),
+                                                directionComputed)) /
+                        300,
+              0, 255));
   }
-  return topColor;
+  return color;
 }
 
 FoxPlane::FoxPlane(Vector3 cNormal, Vector3 cOrigin) {
@@ -141,6 +137,24 @@ FoxPlane::FoxPlane(Vector3 cNormal, Vector3 cOrigin) {
 }
 
 FoxPlane::~FoxPlane() {}
+
+float FoxPlane::DistanceToPoint(Vector3 point) {
+  // Distance = |Ax + By + Cz + D| / sqrt(A^2 + B^2 + C^2)
+  // (A, B, C) is the normal vector of the plane.
+  //  (x, y, z) are the coordinates of the center of the sphere.
+  // D is the distance from the origin to the plane along its normal vector.
+  // D = -(A * x0 + B * y0 + C * z0)
+  // (x0, y0, z0) are the coordinates of a point on the plane. You can choose
+  // any point on the plane to calculate D.
+  float distFromOrigin = -Vector3DotProduct(normal, origin);
+  float offsetDistanceOrigin = fabs(normal.x * point.x + normal.y * point.y +
+                                    normal.z * point.z + distFromOrigin);
+  return offsetDistanceOrigin / Vector3Length(normal);
+}
+Vector3 FoxPlane::PointForDistance(float dist, Vector3 point) {
+  Vector3 closestPointVector = Vector3Scale(Vector3Normalize(normal), dist);
+  return Vector3Add(closestPointVector, point);
+}
 
 float FoxPlane::IntersectsRay(RaycastRay ray) {
   float denom = Vector3DotProduct(normal, ray.directionComputed);
@@ -176,14 +190,27 @@ float FoxTri::IntersectsRay(RaycastRay ray, float maxDist) {
 
   Vector3 Q =
       Vector3Add(Vector3Scale(ray.directionComputed, scalar), ray.origin);
-
-  if (Vector3DotProduct(Vector3CrossProduct(BASub, Vector3Subtract(Q, A)),
+  return PointInside(Q, scalar);
+}
+float FoxTri::PointInside(Vector3 point, float scalar) {
+  if (Vector3DotProduct(Vector3CrossProduct(BASub, Vector3Subtract(point, A)),
                         normal) >= 0 &&
-      Vector3DotProduct(Vector3CrossProduct(CBSub, Vector3Subtract(Q, B)),
+      Vector3DotProduct(Vector3CrossProduct(CBSub, Vector3Subtract(point, B)),
                         normal) >= 0 &&
-      Vector3DotProduct(Vector3CrossProduct(ACSub, Vector3Subtract(Q, C)),
+      Vector3DotProduct(Vector3CrossProduct(ACSub, Vector3Subtract(point, C)),
                         normal) >= 0) {
     return scalar;
   }
   return -1;
+}
+// https://cseweb.ucsd.edu/classes/sp19/cse291-d/Files/CSE291_13_CollisionDetection.pdf
+float FoxTri::IntersectsSphere(Vector3 point, float radius) {
+  float dist = raycastPlane->DistanceToPoint(point);
+  if (dist > radius || dist < -radius)
+    return 0;
+  Vector3 pointOnPlane = raycastPlane->PointForDistance(dist, point);
+  if (PointInside(pointOnPlane, fabs(dist)) == -1) {
+    return 0;
+  }
+  return dist;
 }

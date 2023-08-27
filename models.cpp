@@ -32,6 +32,7 @@ FoxModel makeCube(Vector3 position, Vector3 scale) {
 
   ret.tris = vertToTri(vertices, tris, position, scale);
   ret.size = tris / 9;
+  ret.hue = 0;
 
   return ret;
 }

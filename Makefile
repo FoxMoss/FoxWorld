@@ -357,7 +357,8 @@ SRC = $(call rwildcard, *.c, *.h)
 OBJS ?= main.cpp \
 				camera.cpp \
 			models.cpp \
-			customModels.cpp
+			customModels.cpp \
+			player.cpp
 #  utahTeapot.cpp
 
 # For Android platform we call a custom Makefile.Android

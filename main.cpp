@@ -1,9 +1,10 @@
 #include "camera.hpp"
+#include "player.hpp"
 #include "raylib.h"
+#include <raymath.h>
 
 #define WIDTH 100
 #define HEIGHT 100
-#define STEP 0.1
 
 #if defined(PLATFORM_WEB)
 #include <emscripten/emscripten.h>
@@ -11,7 +12,7 @@
 
 static void UpdateDrawFrame(void);
 
-FoxCamera *camera = new FoxCamera(WIDTH, HEIGHT);
+Player *player;
 
 Image imageBuffer;
 Texture textureBuffer;
@@ -23,15 +24,15 @@ int main() {
 
   SetTraceLogLevel(LOG_WARNING);
   InitWindow(screenWidth * SCALE, screenHeight * SCALE, "[FoxEngine]");
+  DisableCursor();
 
-  imageBuffer = GenImageColor(screenWidth * SCALE, screenHeight * SCALE, WHITE);
-  textureBuffer = LoadTextureFromImage(imageBuffer);
+  player = new Player(WIDTH, HEIGHT);
+
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(UpdateDrawFrame, 60, 1);
 #else
 
-  SetTargetFPS(60);
-  setupModels();
+  SetTargetFPS(60 / SPEED);
 
   while (!WindowShouldClose()) {
     UpdateDrawFrame();
@@ -43,46 +44,13 @@ int main() {
 }
 
 static void UpdateDrawFrame(void) {
+  player->Update();
 
-  if (IsKeyDown(KEY_W)) {
-    camera->position.z += STEP;
-  }
-
-  if (IsKeyDown(KEY_S)) {
-    camera->position.z -= STEP;
-  }
-  if (IsKeyDown(KEY_D)) {
-    camera->position.x += STEP;
-  }
-
-  if (IsKeyDown(KEY_A)) {
-    camera->position.x -= STEP;
-  }
-
-  if (IsKeyDown(KEY_E)) {
-    camera->position.y += STEP;
-  }
-
-  if (IsKeyDown(KEY_Q)) {
-    camera->position.y -= STEP;
-  }
-  if (IsKeyDown(KEY_RIGHT)) {
-    camera->rotation.y += STEP;
-  }
-
-  if (IsKeyDown(KEY_LEFT)) {
-    camera->rotation.y -= STEP;
-  }
-
-  UpdateTexture(textureBuffer, imageBuffer.data);
+  player->Draw();
 
   BeginDrawing();
 
   ClearBackground(RED);
-
-  camera->Render(&imageBuffer);
-
-  DrawTexture(textureBuffer, 0, 0, WHITE);
 
   DrawFPS(10, 10);
 
