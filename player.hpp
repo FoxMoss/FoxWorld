@@ -6,9 +6,9 @@
 #define STEP 0.1
 
 #define FRICTION 0.7
-#define DRAG 0.8
+#define DRAG 0.9
 
-#define COLLISION_DEPTH 5
+#define COLLISION_DEPTH 2
 class Player : FoxCamera {
 private:
   Image image;

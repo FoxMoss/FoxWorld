@@ -10,7 +10,8 @@
 std::vector<FoxModel> genModels() {
   std::vector<FoxModel> models;
   models.push_back(makeCube({0, -1.4, 0}, {10, 1, 20}));
-  models.push_back(makeCube({0, -1.4, 21}, {10, 1, 10}));
+  models.push_back(makeCube({0, 0, 10}, {10, 2, 10}));
+  models.push_back(makeTorus({0, 0, 20}, {10, 2, 10}));
   return models;
 }
 Player::Player(int cWidth, int cHeight) : FoxCamera(cWidth, cWidth) {
@@ -28,7 +29,7 @@ Player::Player(int cWidth, int cHeight) : FoxCamera(cWidth, cWidth) {
   models = genModels();
   position = {0, playerHeight, 0};
   collisionPosition = Vector3Zero();
-  velocity = Vector3Zero();
+  velocity = {0.0001, 0.0001, 0.0001};
   nextPos = Vector3Zero();
 }
 void Player::Draw() {
@@ -64,7 +65,7 @@ void Player::Update() {
     nextPos.y -= STEP * SPEED;
   }
   if (grounded && IsKeyDown(KEY_SPACE)) {
-    velocity = Vector3Add(velocity, {0, 2, 0});
+    velocity = Vector3Add(velocity, {0, 1.4, 0});
   }
   Vector2 mouseDelta = GetMouseDelta();
   rotation.y -= mouseDelta.x / 800 * SPEED;
@@ -73,7 +74,7 @@ void Player::Update() {
   nextPos = Vector3RotateByAxisAngle(nextPos, {0, -1, 0}, rotation.y);
   velocity = Vector3Add(velocity, nextPos);
 
-  velocity = Vector3Add(velocity, {0, -0.2, 0});
+  velocity = Vector3Add(velocity, {0, -0.1, 0});
 
   velocity.x *= FRICTION;
   velocity.z *= FRICTION;
@@ -99,7 +100,7 @@ void Player::CollisonUpdate() {
 
         if (dist == 0)
           continue;
-        if (dist < collisionRadius) {
+        if (std::fabs(dist) < collisionRadius) {
           position = Vector3Add(
               position, Vector3Scale(Vector3Normalize(model->tris[i]->normal),
                                      collisionRadius - dist));
