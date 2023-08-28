@@ -15,6 +15,8 @@ private:
   Texture textureBuffer;
   Texture shotgun;
 
+  RaycastRay *gunRay;
+
   Vector3 velocity;
   float collisionRadius;
   Vector3 collisionPosition;

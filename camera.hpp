@@ -22,6 +22,8 @@ public:
 
   RaycastRay(Vector3 cDirection, Vector3 cOrigin);
   ~RaycastRay();
+
+  float GetDistance(std::vector<FoxModel> *models);
   Color GetColor(std::vector<FoxModel> *models);
 };
 class FoxPlane {
@@ -82,6 +84,7 @@ public:
   Vector3 rotation;
 };
 
+FoxModel makeCubeColor(Vector3 position, Vector3 scale, int hue);
 FoxModel makeCube(Vector3 position, Vector3 scale);
 FoxModel makeTorus(Vector3 position, Vector3 scale);
 FoxModel readTris();

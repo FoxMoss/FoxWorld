@@ -6,6 +6,9 @@
 #include <string>
 
 FoxModel makeCube(Vector3 position, Vector3 scale) {
+  return makeCubeColor(position, scale, 0);
+}
+FoxModel makeCubeColor(Vector3 position, Vector3 scale, int hue) {
   int tris = 108;
   FoxModel ret;
   ret.tris = (FoxTri **)malloc(sizeof(FoxTri *) * tris);
@@ -32,7 +35,7 @@ FoxModel makeCube(Vector3 position, Vector3 scale) {
 
   ret.tris = vertToTri(vertices, tris, position, scale);
   ret.size = tris / 9;
-  ret.hue = 0;
+  ret.hue = hue;
 
   return ret;
 }

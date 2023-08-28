@@ -131,6 +131,24 @@ Color RaycastRay::GetColor(std::vector<FoxModel> *models) {
   }
   return color;
 }
+float RaycastRay::GetDistance(std::vector<FoxModel> *models) {
+
+  float topScale = INFINITY;
+
+  for (std::vector<FoxModel>::iterator model = models->begin();
+       model != models->end(); model++) {
+    for (int i = 0; i < model->size; i++) {
+      float scalar = model->tris[i]->IntersectsRay(*this, topScale);
+
+      if (scalar == -1 || scalar >= topScale)
+        continue;
+
+      topScale = scalar;
+    }
+  }
+
+  return topScale;
+}
 
 FoxPlane::FoxPlane(Vector3 cNormal, Vector3 cOrigin) {
   normal = cNormal;
